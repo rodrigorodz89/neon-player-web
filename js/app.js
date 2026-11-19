@@ -31,10 +31,12 @@ var App = (function () {
     Nav.zerar(); AoVivo.parar();
     $('entrar-erro').textContent = erro || '';
     $('btn-demo').hidden = !comDemo;
+    $('btn-instalar').hidden = !Instalar.cabe();
     $('btn-entrar').disabled = false; $('btn-entrar').textContent = 'Entrar';
     var l = Guarda.ler('np_login', null);
     if (l && l.u && !$('in-usuario').value) $('in-usuario').value = l.u;
     Tela.mostrar('entrar');
+    Instalar.oferecer();   // iPhone no Safari: instalar ANTES de entrar, para logar uma vez só
   }
 
   // Resposta da API (login ou código): decide a tela.
@@ -71,7 +73,6 @@ var App = (function () {
       return Catalogo.carregar(Tela.status).then(function () {
         Tela.mostrar('casca');
         Pag.ir('inicio');
-        Instalar.oferecer();
       });
     }).catch(function (e) {
       console.error(e);
@@ -133,6 +134,7 @@ var App = (function () {
     $('in-usuario').addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); $('in-senha').focus(); } });
     $('ver-senha').addEventListener('click', function () { var i = $('in-senha'); i.type = i.type === 'password' ? 'text' : 'password'; });
     $('btn-demo').addEventListener('click', function () { if (App._demo) tratar(App._demo, false); });
+    $('btn-instalar').addEventListener('click', function () { Instalar.abrir(true); });
     $('aviso-tentar').addEventListener('click', carregar);
     $('aviso-sair').addEventListener('click', function () { Guarda.apagar('np_login'); irParaEntrar('', false); });
     // nada de menu de contexto nem de arrastar imagem: é um app, não uma página

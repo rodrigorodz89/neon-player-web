@@ -543,7 +543,7 @@ var Config = (function () {
         });
       })
     ];
-    if (Aparelho.ios && !Aparelho.instalado) itens.push(acao(['M12 3v12', 'M8 7l4-4 4 4', 'M5 13v6h14v-6'], 'Instalar na tela de início', Instalar.abrir));
+    if (Aparelho.ios && !Aparelho.instalado) itens.push(acao(['M12 3v12', 'M8 7l4-4 4 4', 'M5 13v6h14v-6'], 'Instalar na tela de início', function () { Instalar.abrir(false); }));
     if (Sessao.suporte && !Sessao.demo) itens.push(acao(['M21 12a8 8 0 0 1-11.800 7L4 20l1.200-4.600A8 8 0 1 1 21 12z'], 'Falar com o suporte', function () {
       window.open('https://wa.me/' + String(Sessao.suporte).replace(/\D/g, ''), '_blank', 'noopener');
     }));
@@ -578,24 +578,36 @@ var Config = (function () {
 
 /* ------------------------------------------------------------------ instalar na tela de início (iPhone) */
 var Instalar = (function () {
-  function abrir() {
+  // No iPhone o aplicativo instalado (ícone na tela de início) guarda os dados
+  // SEPARADO do Safari: quem entra no Safari e só depois instala precisa digitar
+  // usuário e senha de novo no ícone (o Rodrigo achou chato, 19/11/2026). Por
+  // isso o aviso vem ANTES do login: instala primeiro, entra uma vez só.
+  // antesDeEntrar: aberto na tela de entrar (true) ou em Configurações, já logado (false).
+  function abrir(antesDeEntrar) {
     Folha.abrir(function (c) {
-      c.appendChild(el('h3', { text: 'Instalar na tela de início' }));
+      c.appendChild(el('h3', { text: antesDeEntrar ? 'Instale antes de entrar' : 'Instalar na tela de início' }));
+      c.appendChild(el('div', { class: 'texto', text: antesDeEntrar
+        ? 'Assim o Neon Player vira um aplicativo no seu iPhone e você digita o usuário e a senha uma vez só.'
+        : 'O aplicativo instalado guarda o acesso separado do Safari: ao abrir pelo ícone ele pede o usuário e a senha mais uma vez.' }));
       var corpo = el('div', { class: 'corpo' });
       function passo(n, html) { corpo.appendChild(el('div', { class: 'passo' }, [el('div', { class: 'b', text: String(n) }), el('p', { html: html })])); }
       var compart = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M8 7l4-4 4 4"/><path d="M5 13v6h14v-6"/></svg>';
       passo(1, 'Toque no botão <b>Compartilhar</b> ' + compart + ' na barra do Safari.');
       passo(2, 'Role e toque em <b>Adicionar à Tela de Início</b>.');
       passo(3, 'Confirme em <b>Adicionar</b>. O ícone do Neon Player aparece junto dos seus aplicativos.');
+      passo(4, 'Abra o <b>Neon Player pelo ícone</b> e entre com o seu usuário e a sua senha.');
       c.appendChild(corpo);
-      c.appendChild(el('div', { class: 'botoes' }, [el('button', { class: 'btn p', text: 'Entendi', onclick: Folha.fechar })]));
+      c.appendChild(el('div', { class: 'botoes' }, antesDeEntrar
+        ? [el('button', { class: 'btn s', text: 'Continuar no Safari', onclick: Folha.fechar }), el('button', { class: 'btn p', text: 'Entendi', onclick: Folha.fechar })]
+        : [el('button', { class: 'btn p', text: 'Entendi', onclick: Folha.fechar })]));
     });
   }
-  // uma vez por aparelho, na primeira entrada pelo Safari do iPhone
+  function cabe() { return Aparelho.ios && !Aparelho.instalado; }
+  // Uma vez por aparelho, na primeira vez que a tela de entrar aparece no Safari do iPhone.
   function oferecer() {
-    if (!Aparelho.ios || Aparelho.instalado || Guarda.ler('np_instalar_visto', false)) return;
-    Guarda.gravar('np_instalar_visto', true);
-    setTimeout(abrir, 1200);
+    if (!cabe() || Guarda.ler('np_instalar_antes', false)) return;
+    Guarda.gravar('np_instalar_antes', true);
+    setTimeout(function () { if ($('t-entrar').classList.contains('ativa')) abrir(true); }, 700);
   }
-  return { abrir: abrir, oferecer: oferecer };
+  return { abrir: abrir, oferecer: oferecer, cabe: cabe };
 })();
