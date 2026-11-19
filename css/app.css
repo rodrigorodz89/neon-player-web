@@ -58,8 +58,6 @@ img{display:block}
 .campo input::placeholder{color:var(--fraco);font-weight:500}
 .campo button{color:var(--mudo);padding:8px}
 .erro{color:var(--perigo);font-weight:600;min-height:1.3em}
-.codigo-linha{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;color:var(--mudo);font-size:13px;margin-top:6px}
-.codigo-linha b{color:var(--texto);font-weight:700;letter-spacing:.04em}
 .link{color:var(--ciano);font-weight:700;padding:8px 6px}
 .mini{font-size:12px;color:var(--fraco)}
 

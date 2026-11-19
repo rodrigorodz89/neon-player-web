@@ -30,7 +30,6 @@ var App = (function () {
   function irParaEntrar(erro, comDemo) {
     Nav.zerar(); AoVivo.parar();
     $('entrar-erro').textContent = erro || '';
-    $('entrar-codigo').textContent = Aparelho.codigoBonito();
     $('btn-demo').hidden = !comDemo;
     $('btn-entrar').disabled = false; $('btn-entrar').textContent = 'Entrar';
     var l = Guarda.ler('np_login', null);
@@ -133,7 +132,6 @@ var App = (function () {
     $('form-entrar').addEventListener('submit', enviarLogin);
     $('in-usuario').addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); $('in-senha').focus(); } });
     $('ver-senha').addEventListener('click', function () { var i = $('in-senha'); i.type = i.type === 'password' ? 'text' : 'password'; });
-    $('copiar-codigo').addEventListener('click', function () { copiar(Aparelho.codigoBonito(), 'Código copiado'); });
     $('btn-demo').addEventListener('click', function () { if (App._demo) tratar(App._demo, false); });
     $('aviso-tentar').addEventListener('click', carregar);
     $('aviso-sair').addEventListener('click', function () { Guarda.apagar('np_login'); irParaEntrar('', false); });

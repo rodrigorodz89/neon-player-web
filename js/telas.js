@@ -528,7 +528,10 @@ var Config = (function () {
       Sessao.cliente ? li('Cliente', Sessao.cliente) : null,
       li('Lista em uso', Sessao.demo ? 'Demonstração' : (Sessao.listaNome || 'Lista do seu cadastro')),
       Sessao.vence ? li('Vencimento', Sessao.vence) : null,
-      li('Código do aparelho', Aparelho.codigoBonito()),
+      // O código saiu da tela de entrar (19/11/2026: gerava dúvida, "só libera pelo código?").
+      // Fica aqui, para quem cadastra pelo código como nas outras plataformas; tocar copia.
+      el('button', { class: 'li', onclick: function () { copiar(Aparelho.codigoBonito(), 'Código copiado'); } },
+        [el('span', { class: 'r', text: 'Código do aparelho' }), el('span', { class: 'v', text: Aparelho.codigoBonito() })]),
       li('Versão', VERSAO)
     ]));
     var itens = [
