@@ -111,7 +111,7 @@ var Busca = (function () {
 
 /* ------------------------------------------------------------------ Início */
 var Inicio = (function () {
-  var dados = null, capaI = 0, relogio = null, camada = 0, artes = {}, seguraAte = 0, assinatura = '';
+  var dados = null, capaI = 0, naTela = null, relogio = null, camada = 0, artes = {}, seguraAte = 0, assinatura = '';
 
   function calcular() {
     var c = Catalogo.get();
@@ -124,30 +124,53 @@ var Inicio = (function () {
     artes[ch] = (x.ehSerie ? Lista.infoSerie(x.item.id) : Lista.infoFilme(x.item.id)).then(function (j) {
       var info = (j && j.info) || {}, b = info.backdrop_path;
       if (Array.isArray(b)) b = b[0];
-      return imagemSegura(b) || null;
+      b = imagemSegura(b);
+      // a arte 'original' do TMDB passa de 1 MB: no celular vai a de 1280, que abre na hora
+      return b ? b.split('image.tmdb.org/t/p/original/').join('image.tmdb.org/t/p/w1280/') : null;
     }).catch(function () { return null; });
     return artes[ch];
   }
+  // O título e a arte trocam JUNTOS: o texto só muda quando a imagem nova está
+  // carregada (ou depois de 2,5 s, se ela não vier). `naTela` é o que os botões
+  // Assistir e Detalhes abrem: sempre o título que a pessoa está vendo.
   function pintarCapa(x) {
-    $('capa-titulo').textContent = x.item.nome;
-    $('capa-meta').textContent = Destaques.metaDe(x.ehSerie, x.item);
-    var vez = ++camada;
+    var vez = ++camada, poster = imagemSegura(x.item.poster), feito = false;
+    function texto() {
+      if (feito || vez !== camada) return;
+      feito = true; naTela = x;
+      $('capa-titulo').textContent = x.item.nome;
+      $('capa-meta').textContent = Destaques.metaDe(x.ehSerie, x.item);
+    }
+    if (!naTela) texto();            // primeira capa: o título aparece já
+    setTimeout(texto, 2500);
+    // Em pé a capa é alta: a arte deitada (16:9) viraria uma tira estreita e
+    // ampliada. Ali vai o pôster, que já é vertical; deitado, a arte deitada.
+    if (emPe() && poster) { trocarArte(poster, false, vez, texto); arteDe(x); return; }
     arteDe(x).then(function (url) {
       if (vez !== camada) return;
-      var borrao = !url; url = url || imagemSegura(x.item.poster);
-      if (!url) return;
-      var im = new Image();
-      im.referrerPolicy = 'no-referrer';
-      im.onload = function () {
-        if (vez !== camada) return;
-        var a = $('arte-a'), b = $('arte-b'), entra = a.classList.contains('vis') ? b : a, sai = entra === a ? b : a;
-        entra.style.backgroundImage = 'url("' + url.replace(/"/g, '%22') + '")';
-        entra.classList.toggle('borrao', borrao);
-        entra.classList.add('vis'); sai.classList.remove('vis');
-      };
-      im.src = url;
+      if (!url && !poster) { texto(); return; }
+      trocarArte(url || poster, !url && !emPe(), vez, texto);
     });
   }
+  function emPe() { return window.matchMedia('(orientation: portrait)').matches && window.innerWidth < 820; }
+  // Troca com dissolve: a imagem nova só entra depois de carregada.
+  function trocarArte(url, borrao, vez, aoEntrar) {
+    var im = new Image();
+    im.referrerPolicy = 'no-referrer';
+    im.onload = function () {
+      if (vez !== camada) return;
+      var a = $('arte-a'), b = $('arte-b'), entra = a.classList.contains('vis') ? b : a, sai = entra === a ? b : a;
+      entra.style.backgroundImage = 'url("' + url.replace(/"/g, '%22') + '")';
+      entra.classList.toggle('borrao', borrao);
+      // imagem deitada numa capa em pé (título sem pôster): inteira no alto, sem ampliar
+      entra.classList.toggle('deitada', emPe() && im.naturalWidth > im.naturalHeight * 1.15);
+      entra.classList.add('vis'); sai.classList.remove('vis');
+      aoEntrar();
+    };
+    im.onerror = aoEntrar;
+    im.src = url;
+  }
+  function repintar() { if (dados && dados.capa.length && Pag.atual() === 'inicio') pintarCapa(dados.capa[capaI]); }
   function girar() {
     if (!dados || !dados.capa.length) return;
     if (Date.now() < seguraAte || document.hidden || Nav.tem('ficha') || Nav.tem('player') || Nav.tem('folha')) return;
@@ -196,17 +219,20 @@ var Inicio = (function () {
   function pausar() { clearInterval(relogio); relogio = null; }
   function iniciar() {
     $('capa-assistir').addEventListener('click', function () {
-      var x = dados && dados.capa[capaI]; if (!x) return;
+      var x = naTela; if (!x) return;
       if (x.ehSerie) Ficha.serie(x.item); else Ficha.tocarFilme(x.item, true);
     });
     $('capa-detalhes').addEventListener('click', function () {
-      var x = dados && dados.capa[capaI]; if (!x) return;
+      var x = naTela; if (!x) return;
       if (x.ehSerie) Ficha.serie(x.item); else Ficha.filme(x.item);
     });
+    // girou o celular: a capa troca de arte (pôster em pé, arte deitada deitado)
+    var mq = window.matchMedia('(orientation: portrait)');
+    if (mq.addEventListener) mq.addEventListener('change', repintar); else if (mq.addListener) mq.addListener(repintar);
     // mexeu na tela: segura a troca por 6 s, para o título não mudar debaixo do dedo
     $('t-inicio').addEventListener('touchstart', function () { seguraAte = Date.now() + 6000; }, { passive: true });
   }
-  function zerar() { dados = null; artes = {}; assinatura = ''; capaI = 0; $('capa-titulo').textContent = ''; limpar($('fileiras')); ['arte-a', 'arte-b'].forEach(function (i) { $(i).classList.remove('vis'); $(i).style.backgroundImage = ''; }); }
+  function zerar() { dados = null; artes = {}; assinatura = ''; capaI = 0; naTela = null; camada++; $('capa-titulo').textContent = ''; limpar($('fileiras')); ['arte-a', 'arte-b'].forEach(function (i) { $(i).classList.remove('vis'); $(i).style.backgroundImage = ''; }); }
   return { iniciar: iniciar, mostrar: mostrar, pausar: pausar, zerar: zerar };
 })();
 
