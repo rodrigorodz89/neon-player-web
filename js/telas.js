@@ -296,7 +296,9 @@ var Tv = (function () {
     if (atual && atual.id === c.id) { AoVivo.telaCheia(); return; }
     AoVivo.abrir(c);
   }
-  function aoMudarCanal(c) {
+  function aoMudarCanal(c, soFavorito) {
+    // favoritado pela barra da tela cheia: só acerta a estrela e a lista de categorias
+    if (soFavorito) { if (c) $('tv-fav').classList.toggle('on', Favoritos.tem(c.id)); desenharCats(); return; }
     [].forEach.call($('tv-canais').querySelectorAll('.linha.sel'), function (n) { n.classList.remove('sel'); });
     $('tv-canal').textContent = c ? c.nome : Textos.tv;
     $('tv-agora').textContent = '';
@@ -317,6 +319,7 @@ var Tv = (function () {
       l = l.filter(function (p) { return Number(p.stop_timestamp) > agora; }).slice(0, 4);
       if (!l.length) return;
       $('tv-agora').textContent = 'Agora: ' + b64(l[0].title);
+      AoVivo.guia(b64(l[0].title));
       limpar(cx);
       l.forEach(function (p) { cx.appendChild(el('div', { class: 'prog' }, [el('b', { text: hora(p.start_timestamp) }), b64(p.title)])); });
     }).catch(function () {});

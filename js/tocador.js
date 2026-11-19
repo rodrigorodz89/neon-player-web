@@ -39,8 +39,16 @@ Motor.prototype.soltar = function () {
 };
 
 /* ------------------------------------------------------------------ canal ao vivo (a "caixinha" da TV ao Vivo) */
+/* Tela cheia (19/11/2026, fila do Rodrigo): o MESMO <video> da caixinha cresce
+   para a tela inteira (classe .cheio), com a barra do Android por cima. Antes o
+   iPhone usava o player dele (webkitEnterFullscreen): controles que não são do
+   Neon, barra de progresso num canal ao vivo, e — o defeito — ao sair dele o
+   iPhone PAUSA o vídeo, e a caixinha não tinha botão para voltar a tocar. Agora
+   o vídeo nunca sai da página, e canal parado sempre mostra o play. */
 var AoVivo = (function () {
   var motor = null, canal = null, tentativas = 0, vigia = null, ultimoAndar = 0, aoMudar = null;
+  var cheio = false, someBarra = null, pausadoEm = 0, relogio = null;
+  var PROPORCOES = [['contain', 'Original'], ['cover', 'Preencher a tela'], ['fill', 'Esticar']];
 
   function v() { return $('v-tv'); }
   function sobre(texto, rodando) {
@@ -51,30 +59,90 @@ var AoVivo = (function () {
     if (rodando) s.appendChild(el('div', { class: 'rodando', style: 'margin:0' }));
     if (texto) s.appendChild(el('div', { text: texto }));
   }
+  var ICO_PAUSA = '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>';
+  var ICO_PLAY = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
+  var ICO_SOM = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg>';
+  var ICO_MUDO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H3v6h3l5 4z"/><path d="M16 9l5 6M21 9l-5 6"/></svg>';
+
+  // o play da caixinha e o botão de pausa da barra acompanham o vídeo
+  function pintarEstado() {
+    var video = v(), parado = !!canal && video.paused && !video.ended;
+    $('tv-retomar').hidden = !parado || !$('tv-sobre').hidden && $('tv-sobre').textContent !== '';
+    $('tb-pausa').innerHTML = video.paused ? ICO_PLAY : ICO_PAUSA;
+    $('tb-som').innerHTML = video.muted ? ICO_MUDO : ICO_SOM;
+    var fav = canal && Favoritos.tem(canal.id);
+    $('tb-fav').classList.toggle('on', !!fav);
+    $('tb-fav').querySelector('span').textContent = fav ? 'Remover dos favoritos' : 'Favoritar';
+  }
+
   function iniciar(aoMudarEstado) {
     aoMudar = aoMudarEstado;
     motor = new Motor(v());
     var video = v();
-    video.addEventListener('playing', function () { tentativas = 0; ultimoAndar = Date.now(); sobre(null); });
+    var prop = Guarda.ler('np_proporcao', 'contain');
+    video.style.objectFit = PROPORCOES.some(function (p) { return p[0] === prop; }) ? prop : 'contain';
+    video.addEventListener('playing', function () { tentativas = 0; ultimoAndar = Date.now(); sobre(null); pintarEstado(); });
+    video.addEventListener('play', pintarEstado);
+    video.addEventListener('pause', function () { pausadoEm = Date.now(); pintarEstado(); mostrarBarra(); });
+    video.addEventListener('volumechange', pintarEstado);
     video.addEventListener('timeupdate', function () { ultimoAndar = Date.now(); });
-    video.addEventListener('waiting', function () { if (canal) sobre('', true); });
+    video.addEventListener('waiting', function () { if (canal && !video.paused) sobre('', true); });
     video.addEventListener('error', function () { if (canal && video.getAttribute('src')) falhou(); });
     video.addEventListener('falha', function () { if (canal) falhou(); });
-    // dois toques na imagem = tela cheia
-    video.addEventListener('dblclick', telaCheia);
+    // Se mesmo assim o player do sistema abrir (gesto do iPhone, menu do Android) e
+    // pausar ao fechar, volta a tocar: quem estava vendo um canal quer o canal.
+    video.addEventListener('webkitendfullscreen', function () { setTimeout(continuar, 300); });
+    // um toque: na caixinha abre a tela cheia; na tela cheia mostra/esconde a barra
+    video.addEventListener('click', function () {
+      if (!canal) return;
+      if (!cheio) { entrarCheio(); return; }
+      if ($('tv-barra').hidden) mostrarBarra(); else esconderBarra();
+    });
+    $('tv-retomar').addEventListener('click', function (e) { e.stopPropagation(); continuar(); });
+    $('tb-voltar').addEventListener('click', function () { Nav.voltar(); });
+    $('tb-pausa').addEventListener('click', function () { if (video.paused) continuar(); else video.pause(); mostrarBarra(); });
+    $('tb-som').addEventListener('click', function () { video.muted = !video.muted; mostrarBarra(); });
+    $('tb-prop').addEventListener('click', proporcao);
+    $('tb-audio').addEventListener('click', faixas);
+    $('tb-fav').addEventListener('click', function () {
+      if (!canal) return;
+      var agora = Favoritos.alternar(canal.id);
+      Toast(agora ? 'Canal guardado nos favoritos' : 'Canal retirado dos favoritos');
+      pintarEstado(); mostrarBarra();
+      if (aoMudar) aoMudar(canal, true);
+    });
+    // Enviar para a TV: AirPlay no iPhone; Chromecast/TV pelo navegador onde ele souber
+    var podeTv = !!(video.webkitShowPlaybackTargetPicker || (video.remote && video.remote.prompt));
+    $('tb-tv').hidden = !podeTv;
+    $('tb-tv').addEventListener('click', function () {
+      try { if (video.webkitShowPlaybackTargetPicker) video.webkitShowPlaybackTargetPicker(); else video.remote.prompt().catch(function () {}); } catch (e) {}
+      mostrarBarra();
+    });
+    $('tv-barra').addEventListener('click', function (e) { if (e.target === $('tv-barra')) esconderBarra(); });
     document.addEventListener('visibilitychange', function () {
       // voltou para o app e o canal estava parado: religa (o iPhone pausa o vídeo fora da tela)
       if (!document.hidden && canal && $('t-tv').classList.contains('ativa') && !Nav.tem('player') && video.paused) reabrir();
     });
+    pintarEstado();
+  }
+  // Voltar a tocar. Ao vivo pausado por mais de 20 s volta ao AGORA (recarrega o canal);
+  // pausa curta só continua de onde estava.
+  function continuar() {
+    if (!canal) return;
+    var video = v();
+    if (!video.getAttribute('src') && !motor.hls) { reabrir(); return; }
+    if (pausadoEm && Date.now() - pausadoEm > 20000) { reabrir(); return; }
+    var p = video.play(); if (p && p.catch) p.catch(function () { reabrir(); });
   }
   function falhou() {
     if (!canal) return;
     if (tentativas < 2) { tentativas++; sobre('', true); setTimeout(reabrir, 1500 * tentativas); return; }
     sobre(Textos.canalFora);
+    pintarEstado();
   }
-  function reabrir() { if (canal) { motor.abrir(Lista.urlCanal(canal.id)); ultimoAndar = Date.now(); } }
+  function reabrir() { if (canal) { pausadoEm = 0; motor.abrir(Lista.urlCanal(canal.id)); ultimoAndar = Date.now(); sobre('', true); } }
   function abrir(c) {
-    canal = c; tentativas = 0;
+    canal = c; tentativas = 0; pausadoEm = 0;
     sobre('', true);
     $('tv-cheia').hidden = false;
     motor.abrir(Lista.urlCanal(c.id));
@@ -86,29 +154,109 @@ var AoVivo = (function () {
       if (!canal || document.hidden || v().paused) { ultimoAndar = Date.now(); return; }
       if (Date.now() - ultimoAndar > 25000) { ultimoAndar = Date.now(); if (tentativas < 4) { tentativas++; reabrir(); } }
     }, 5000);
+    $('tb-nome').textContent = c.nome;
+    $('tb-agora').textContent = '';
+    pintarEstado();
     if (aoMudar) aoMudar(c);
   }
   function parar() {
+    if (cheio) sairCheio(true);
     clearInterval(vigia); vigia = null;
     if (motor) motor.soltar();
     canal = null;
     $('tv-cheia').hidden = true;
     sobre('Escolha um canal');
+    pintarEstado();
     if (aoMudar) aoMudar(null);
   }
   // pausa sem esquecer o canal (ao abrir um filme: muita lista só permite uma conexão)
-  function suspender() { if (motor && canal) { clearInterval(vigia); vigia = null; motor.soltar(); sobre('Toque no canal para voltar a assistir'); } }
-  function telaCheia() {
-    var video = v();
-    if (!canal) return;
-    try {
-      if (video.webkitEnterFullscreen && (Aparelho.ios || !video.requestFullscreen)) { video.webkitEnterFullscreen(); return; }
-      var caixa = $('tv-previa');
-      var p = (caixa.requestFullscreen || caixa.webkitRequestFullscreen).call(caixa);
-      if (p && p.then) p.then(function () { try { screen.orientation.lock('landscape').catch(function () {}); } catch (e) {} }).catch(function () {});
-    } catch (e) {}
+  function suspender() {
+    if (motor && canal) { if (cheio) sairCheio(true); clearInterval(vigia); vigia = null; motor.soltar(); sobre('Toque no canal para voltar a assistir'); pintarEstado(); }
   }
-  return { iniciar: iniciar, abrir: abrir, parar: parar, suspender: suspender, telaCheia: telaCheia, atual: function () { return canal; } };
+
+  /* ---- tela cheia do Neon ---- */
+  function entrarCheio() {
+    if (!canal || cheio) return;
+    cheio = true;
+    $('tv-previa').classList.add('cheio');
+    document.documentElement.classList.add('tv-cheia');
+    Nav.camada('tvcheia', function () { sairCheio(true); });
+    // Android e computador: tela cheia de verdade e deitado; o iPhone não deixa
+    // um elemento ocupar a tela (só o player dele), então lá a página já basta.
+    var caixa = $('tv-previa'), pedir = caixa.requestFullscreen || caixa.webkitRequestFullscreen;
+    if (pedir && !Aparelho.ios) {
+      try {
+        var p = pedir.call(caixa);
+        if (p && p.then) p.then(function () { try { screen.orientation.lock('landscape').catch(function () {}); } catch (e) {} }).catch(function () {});
+      } catch (e) {}
+    }
+    relogio = setInterval(pintarRelogio, 15000); pintarRelogio();
+    mostrarBarra();
+    continuar();
+  }
+  function sairCheio(peloVoltar) {
+    if (!cheio) return;
+    cheio = false;
+    $('tv-previa').classList.remove('cheio');
+    document.documentElement.classList.remove('tv-cheia');
+    clearInterval(relogio); clearTimeout(someBarra);
+    $('tv-barra').hidden = true;
+    try { if (document.fullscreenElement) document.exitFullscreen(); else if (document.webkitFullscreenElement) document.webkitExitFullscreen(); } catch (e) {}
+    try { screen.orientation.unlock(); } catch (e) {}
+    // sair da tela cheia nunca deixa o canal parado
+    setTimeout(function () { if (canal && v().paused) continuar(); }, 250);
+  }
+  // saiu da tela cheia pelo próprio navegador (Esc, gesto do Android): fecha a camada também
+  document.addEventListener('fullscreenchange', function () { if (cheio && !document.fullscreenElement && Nav.tem('tvcheia')) Nav.voltar(); });
+  function telaCheia() { if (cheio) Nav.voltar(); else entrarCheio(); }
+  function pintarRelogio() { var d = new Date(); $('tb-relogio').textContent = ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2); }
+  function mostrarBarra() {
+    if (!cheio) return;
+    $('tv-barra').hidden = false;
+    clearTimeout(someBarra);
+    // some sozinha com o canal tocando; parado, fica (é onde está o play)
+    someBarra = setTimeout(function () { if (!v().paused && !Nav.tem('folha')) esconderBarra(); }, 4000);
+  }
+  function esconderBarra() { clearTimeout(someBarra); $('tv-barra').hidden = true; }
+  function proporcao() {
+    var video = v(), atual = video.style.objectFit || 'contain', i = 0;
+    PROPORCOES.forEach(function (p, n) { if (p[0] === atual) i = n; });
+    var prox = PROPORCOES[(i + 1) % PROPORCOES.length];
+    video.style.objectFit = prox[0]; Guarda.gravar('np_proporcao', prox[0]);
+    Toast(prox[1]); mostrarBarra();
+  }
+  // Áudio e legendas: as faixas que o canal tiver (hls.js ou o próprio Safari)
+  function faixas() {
+    var video = v(), h = motor.hls, itens = [];
+    if (h && h.audioTracks && h.audioTracks.length > 1) {
+      h.audioTracks.forEach(function (t, n) { itens.push({ rotulo: 'Áudio: ' + (t.name || t.lang || ('Faixa ' + (n + 1))), valor: function () { h.audioTrack = n; }, sel: h.audioTrack === n }); });
+    } else if (video.audioTracks && video.audioTracks.length > 1) {
+      for (var a = 0; a < video.audioTracks.length; a++) (function (n) {
+        var t = video.audioTracks[n];
+        itens.push({ rotulo: 'Áudio: ' + (t.label || t.language || ('Faixa ' + (n + 1))), sel: t.enabled,
+          valor: function () { for (var k = 0; k < video.audioTracks.length; k++) video.audioTracks[k].enabled = (k === n); } });
+      })(a);
+    }
+    var legs = [];
+    if (h && h.subtitleTracks && h.subtitleTracks.length) {
+      h.subtitleTracks.forEach(function (t, n) { legs.push({ rotulo: 'Legenda: ' + (t.name || t.lang || ('Faixa ' + (n + 1))), valor: function () { h.subtitleTrack = n; h.subtitleDisplay = true; }, sel: h.subtitleTrack === n }); });
+      legs.unshift({ rotulo: 'Sem legenda', valor: function () { h.subtitleTrack = -1; }, sel: h.subtitleTrack === -1 });
+    } else if (video.textTracks && video.textTracks.length) {
+      var lista = [];
+      for (var b = 0; b < video.textTracks.length; b++) if (/subtitles|captions/.test(video.textTracks[b].kind)) lista.push(video.textTracks[b]);
+      if (lista.length) {
+        legs.push({ rotulo: 'Sem legenda', valor: function () { lista.forEach(function (t) { t.mode = 'disabled'; }); }, sel: lista.every(function (t) { return t.mode !== 'showing'; }) });
+        lista.forEach(function (t, n) { legs.push({ rotulo: 'Legenda: ' + (t.label || t.language || ('Faixa ' + (n + 1))), sel: t.mode === 'showing',
+          valor: function () { lista.forEach(function (x) { x.mode = x === t ? 'showing' : 'disabled'; }); } }); });
+      }
+    }
+    itens = itens.concat(legs);
+    if (!itens.length) { Toast('Este canal tem um áudio só e não tem legenda.'); mostrarBarra(); return; }
+    Folha.lista('Áudio e legendas', itens, function (f) { f(); Toast('Pronto'); });
+  }
+  function guia(texto) { $('tb-agora').textContent = texto || ''; }
+  return { iniciar: iniciar, abrir: abrir, parar: parar, suspender: suspender, telaCheia: telaCheia, guia: guia,
+    cheio: function () { return cheio; }, atual: function () { return canal; } };
 })();
 
 /* ------------------------------------------------------------------ filme e episódio (tela inteira) */

@@ -1,7 +1,7 @@
 /* Neon Player web — base: utilidades, guarda local, textos, controle dos pais. */
 'use strict';
 
-var VERSAO = '0.1.1';
+var VERSAO = '0.1.2';
 
 function $(id) { return document.getElementById(id); }
 function el(tag, attrs, filhos) {
@@ -144,11 +144,16 @@ function copiar(texto, aviso) {
 /* Folha que sobe de baixo: lista de categorias, confirmação, senha, instalar. */
 var Folha = (function () {
   var aoFechar = null;
-  function abrir(montar, fechar) {
+  function abrir(montar, depoisDeFechar) {
     var caixa = $('folha-caixa'); limpar(caixa);
+    caixa.style.transform = '';
     caixa.appendChild(el('div', { class: 'pega' }));
+    // sair sem escolher nada (19/11/2026: a folha de categorias prendia a pessoa):
+    // o X, tocar fora e arrastar para baixo fecham
+    caixa.appendChild(el('button', { class: 'folha-x', type: 'button', 'aria-label': 'Fechar', onclick: fechar },
+      [Icones.svg(['M6 6l12 12', 'M18 6L6 18'])]));
     montar(caixa);
-    aoFechar = fechar || null;
+    aoFechar = depoisDeFechar || null;
     $('folha').classList.add('aberta');
     Nav.camada('folha', fecharSemVoltar);
   }
@@ -157,7 +162,43 @@ var Folha = (function () {
     var f = aoFechar; aoFechar = null; if (f) f();
   }
   function fechar() { if ($('folha').classList.contains('aberta')) Nav.voltar(); }
+  // ⚠️ No iPhone o "click" não dispara em <div> comum sem cursor:pointer (o CSS de #folha tem):
+  // era por isso que tocar fora da folha não fechava nada.
   document.addEventListener('click', function (e) { if (e.target === $('folha')) fechar(); });
+
+  // Arrastar para baixo fecha: pela alça e pelo título sempre; pela lista, só quando ela
+  // já está no topo (senão o gesto é rolar a lista).
+  (function () {
+    var y0 = null, dy = 0, caixa = null, peloCorpo = false;
+    document.addEventListener('touchstart', function (e) {
+      caixa = $('folha-caixa');
+      if (!$('folha').classList.contains('aberta') || !caixa.contains(e.target) || e.touches.length !== 1) { y0 = null; return; }
+      if (e.target.closest('button,input,select,a')) {
+        var corpo0 = e.target.closest('.corpo');
+        if (!corpo0) { y0 = null; return; }   // botões fora da lista: deixa o toque ser toque
+      }
+      var corpo = e.target.closest('.corpo');
+      peloCorpo = !!corpo;
+      if (corpo && corpo.scrollTop > 0) { y0 = null; return; }
+      y0 = e.touches[0].clientY; dy = 0;
+    }, { passive: true });
+    document.addEventListener('touchmove', function (e) {
+      if (y0 == null) return;
+      dy = e.touches[0].clientY - y0;
+      if (dy <= 0) { if (peloCorpo) { y0 = null; caixa.style.transform = ''; } return; }
+      if (e.cancelable) e.preventDefault();
+      caixa.style.transition = 'none';
+      caixa.style.transform = 'translateY(' + dy + 'px)';
+    }, { passive: false });
+    document.addEventListener('touchend', function () {
+      if (y0 == null) return;
+      y0 = null;
+      caixa.style.transition = 'transform .18s ease';
+      if (dy > 90) { caixa.style.transform = 'translateY(100%)'; setTimeout(function () { fechar(); caixa.style.transform = ''; caixa.style.transition = ''; }, 170); }
+      else { caixa.style.transform = ''; setTimeout(function () { caixa.style.transition = ''; }, 200); }
+      dy = 0;
+    });
+  })();
 
   // itens: [{ rotulo, extra, valor, sel, cadeado }]
   function lista(titulo, itens, aoEscolher) {

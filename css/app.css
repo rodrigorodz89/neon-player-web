@@ -371,3 +371,56 @@ img{display:block}
   #folha .caixa:has(.instalar) .botoes{padding-top:8px}
   #folha .caixa:has(.instalar) .botoes .btn{height:42px}
 }
+
+/* ---------- folha: sair sem escolher ---------- */
+#folha{cursor:pointer}               /* sem isto o iPhone nao dispara o toque fora */
+#folha .caixa{cursor:auto;position:relative;will-change:transform}
+.folha-x{position:absolute;top:10px;right:10px;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  color:var(--mudo);background:rgba(255,255,255,.06);z-index:2}
+.folha-x svg{width:18px;height:18px}
+.folha-x:active{background:var(--foco)}
+#folha h3{padding-right:56px}
+
+/* ---------- ao vivo: play quando o canal esta parado ---------- */
+.tv-retomar{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:64px;height:64px;border-radius:50%;z-index:2;
+  display:flex;align-items:center;justify-content:center;color:#fff;background:linear-gradient(180deg,#19a3ff,var(--azul));
+  box-shadow:0 0 0 2px rgba(0,217,255,.45),0 8px 28px rgba(0,148,255,.45)}
+.tv-retomar svg{width:30px;height:30px;margin-left:3px}
+#tv-previa video{cursor:pointer}
+
+/* ---------- ao vivo em tela cheia: a barra do Android (aoVivoBarra) ---------- */
+#tv-previa.cheio{position:fixed;inset:0;z-index:30;width:auto;height:auto;max-height:none;aspect-ratio:auto;border-radius:0;border:0;box-shadow:none;background:#000}
+#tv-previa.cheio .cheia{display:none}
+html.tv-cheia,html.tv-cheia body{overflow:hidden;background:#000}
+#tv-barra{position:absolute;inset:0;z-index:3;display:flex;flex-direction:column;justify-content:space-between;pointer-events:auto}
+#tv-barra[hidden]{display:none}
+.tb-topo{display:flex;align-items:center;gap:12px;min-width:0;padding:calc(14px + var(--st)) calc(22px + var(--sr)) 38px calc(22px + var(--sl));
+  background:linear-gradient(180deg,rgba(2,6,16,.88),rgba(2,6,16,.55) 60%,transparent)}
+.tb-logo{width:30px;height:30px;border-radius:8px;overflow:hidden;flex:none;display:block;background:#050A18}
+.tb-logo img{width:30px;height:30px;transform:scale(2.05) translateY(8%)}
+.tb-nome{font-size:19px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:0 1 auto}
+.tb-selo{flex:none;background:#D42B2B;color:#fff;font-size:10px;font-weight:800;letter-spacing:.04em;padding:2px 7px;border-radius:4px}
+.tb-agora{color:var(--ciano);font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1 1 auto}
+.tb-relogio{flex:none;font-weight:800;font-size:15px;color:var(--texto)}
+.tb-base{display:flex;align-items:center;gap:10px;padding:38px calc(22px + var(--sr)) calc(14px + var(--sb)) calc(22px + var(--sl));
+  background:linear-gradient(0deg,rgba(2,6,16,.9),rgba(2,6,16,.55) 60%,transparent)}
+.tb-vao{flex:1}
+.tb-b{width:46px;height:46px;flex:none;border-radius:14px;display:inline-flex;align-items:center;justify-content:center;color:var(--texto)}
+.tb-b svg{width:22px;height:22px}
+.tb-b.fantasma{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16)}
+.tb-b.cheio{background:linear-gradient(180deg,#19a3ff,var(--azul));box-shadow:0 0 0 1px rgba(0,217,255,.45),0 6px 20px rgba(0,148,255,.4)}
+.tb-t{height:46px;flex:none;display:inline-flex;align-items:center;gap:8px;padding:0 16px;border-radius:14px;font-weight:700;font-size:14px;
+  color:var(--texto);background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);white-space:nowrap}
+.tb-t svg{width:19px;height:19px;flex:none}
+.tb-t.on{color:var(--ouro);border-color:rgba(255,210,122,.5)}
+.tb-t.on svg{fill:currentColor}
+.tb-b:active,.tb-t:active{transform:scale(.96)}
+/* tela estreita (celular em pe, ou deitado pequeno): os botoes de texto viram so o icone */
+@media (max-width:760px){
+  .tb-t{width:46px;padding:0;justify-content:center}
+  .tb-t span{display:none}
+  .tb-base{gap:8px}
+  .tb-agora{display:none}
+  .tb-nome{font-size:16px}
+}
+@media (max-width:380px){ .tb-b,.tb-t{width:42px;height:42px} .tb-base{gap:6px;padding-left:calc(14px + var(--sl));padding-right:calc(14px + var(--sr))} }
