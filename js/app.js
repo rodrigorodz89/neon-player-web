@@ -66,7 +66,12 @@ var App = (function () {
     if (st === 'expired') { aviso('vencido', 'Acesso vencido', Textos.vencido); return; }
     // sem cadastro (ou o token deixou de valer: senha da lista trocada, aparelho apagado)
     if (viaLogin) {
-      if (r && r.token_invalido) { Guarda.apagar('np_login'); irParaEntrar('O seu acesso mudou. Entre de novo com o usuário e a senha da lista.', false); return; }
+      // outro_aparelho: cada login vale para 2 aparelhos, e um terceiro entrou depois deste
+      if (r && r.token_invalido) {
+        Guarda.apagar('np_login');
+        irParaEntrar(r.outro_aparelho && r.message ? r.message : 'O seu acesso mudou. Entre de novo com o usuário e a senha da lista.', false);
+        return;
+      }
       irParaEntrar((r && r.message) || Textos.naoConfere, false); return;
     }
     irParaEntrar('', false);
@@ -124,8 +129,15 @@ var App = (function () {
     });
   }
 
-  function sair() {
+  // sair de verdade: devolve a vaga do aparelho na API e esquece o acesso
+  function esquecerLogin() {
+    var l = Guarda.ler('np_login', null);
+    if (l && l.t) Api.sair(l.t);
     Guarda.apagar('np_login');
+  }
+
+  function sair() {
+    esquecerLogin();
     Catalogo.limpar(); Lista.usar(null);
     $('in-usuario').value = ''; $('in-senha').value = '';
     carregar();
@@ -145,7 +157,7 @@ var App = (function () {
     $('btn-demo').addEventListener('click', function () { if (App._demo) tratar(App._demo, false); });
     $('btn-instalar').addEventListener('click', function () { Instalar.abrir(true); });
     $('aviso-tentar').addEventListener('click', carregar);
-    $('aviso-sair').addEventListener('click', function () { Guarda.apagar('np_login'); irParaEntrar('', false); });
+    $('aviso-sair').addEventListener('click', function () { esquecerLogin(); irParaEntrar('', false); });
     // nada de menu de contexto nem de arrastar imagem: é um app, não uma página
     document.addEventListener('contextmenu', function (e) { if (!/^(INPUT|TEXTAREA)$/.test(e.target.tagName)) e.preventDefault(); });
     document.addEventListener('dragstart', function (e) { e.preventDefault(); });

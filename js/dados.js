@@ -40,6 +40,19 @@ var Api = (function () {
     }, 20000).then(json);
   }
 
+  // Sair devolve a vaga deste aparelho (cada login vale para 2 aparelhos). Sem
+  // esperar resposta: sair nunca pode travar por falta de rede.
+  function sair(token) {
+    if (!token) return;
+    try {
+      fetch(BASE + '/v2/web/sair', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, keepalive: true,
+        cache: 'no-store', referrerPolicy: 'no-referrer',
+        body: JSON.stringify({ token: token, codigo: Aparelho.codigo() })
+      }).catch(function () {});
+    } catch (e) { /* nada */ }
+  }
+
   // O caminho de todo app da casa: o código deste aparelho já foi cadastrado?
   // Sem cadastro, a resposta é a demonstração (filmes abertos, por alguns dias).
   function ativar() {
@@ -52,7 +65,7 @@ var Api = (function () {
     });
   }
 
-  return { entrar: entrar, entrarComToken: entrarComToken, ativar: ativar, local: LOCAL };
+  return { entrar: entrar, entrarComToken: entrarComToken, sair: sair, ativar: ativar, local: LOCAL };
 })();
 
 /* ------------------------------------------------------------------ servidor da lista */
