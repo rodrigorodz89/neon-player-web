@@ -589,13 +589,38 @@ var Instalar = (function () {
       c.appendChild(el('div', { class: 'texto', text: antesDeEntrar
         ? 'Assim o Neon Player vira um aplicativo no seu iPhone e você digita o usuário e a senha uma vez só.'
         : 'O aplicativo instalado guarda o acesso separado do Safari: ao abrir pelo ícone ele pede o usuário e a senha mais uma vez.' }));
-      var corpo = el('div', { class: 'corpo' });
-      function passo(n, html) { corpo.appendChild(el('div', { class: 'passo' }, [el('div', { class: 'b', text: String(n) }), el('p', { html: html })])); }
-      var compart = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M8 7l4-4 4 4"/><path d="M5 13v6h14v-6"/></svg>';
-      passo(1, 'Toque no botão <b>Compartilhar</b> ' + compart + ' na barra do Safari.');
-      passo(2, 'Role e toque em <b>Adicionar à Tela de Início</b>.');
-      passo(3, 'Confirme em <b>Adicionar</b>. O ícone do Neon Player aparece junto dos seus aplicativos.');
-      passo(4, 'Abra o <b>Neon Player pelo ícone</b> e entre com o seu usuário e a sua senha.');
+      // Cada passo mostra ONDE tocar: a pessoa reconhece o botão pelo desenho, não
+      // pelo nome (pedido do Rodrigo em 19/11/2026, no modelo ilustrado). Os
+      // desenhos são feitos aqui, em HTML e CSS, nas cores do Neon.
+      var corpo = el('div', { class: 'corpo instalar' });
+      var S = function (d) { return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + d + '</svg>'; };
+      var COMPART = S('<path d="M12 3v12"/><path d="M8 7l4-4 4 4"/><path d="M5 13v6h14v-6"/>');
+      function passo(marca, html, desenho) {
+        corpo.appendChild(el('div', { class: 'pcard' }, [
+          el('div', { class: 'pt' }, [el('div', { class: 'b' + (marca === 'ok' ? ' ok' : ''), html: marca === 'ok' ? S('<path d="M5 12.500l4.500 4.500L19 7.500"/>') : String(marca) }), el('p', { html: html })]),
+          el('div', { class: 'pm', html: desenho, 'aria-hidden': 'true' })
+        ]));
+      }
+      // 1. a barra de baixo do Safari, com o Compartilhar aceso
+      passo(1, 'Toque no botão <b>Compartilhar</b> na barra do Safari',
+        '<div class="m-safari"><div class="end">neontv.app</div><div class="ics">' +
+        S('<path d="M15 5l-7 7 7 7"/>') + S('<path d="M9 5l7 7-7 7"/>') + '<span class="alvo">' + COMPART + '</span>' +
+        S('<path d="M4 5.500c2.500-1 5.500-1 8 .500v13c-2.500-1.500-5.500-1.500-8-.500z"/><path d="M20 5.500c-2.500-1-5.500-1-8 .500v13c2.500-1.500 5.500-1.500 8-.500z"/>') +
+        S('<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/>') + '</div></div>');
+      // 2. a lista que sobe, com "Adicionar à Tela de Início" marcado
+      passo(2, 'Role e toque em <b>“Adicionar à Tela de Início”</b>',
+        '<div class="m-lista"><div>Favoritos' + S('<path d="M12 4l2.400 5 5.500.800-4 3.900 1 5.500L12 16.600 7.100 19.200l1-5.500-4-3.900 5.500-.800z"/>') + '</div>' +
+        '<div class="alvo">Adicionar à Tela de Início' + S('<rect x="4" y="4" width="16" height="16" rx="4"/><path d="M12 8.500v7M8.500 12h7"/>') + '</div>' +
+        '<div>Copiar' + S('<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/>') + '</div></div>');
+      // 3. a confirmação, com o "Adicionar" aceso
+      passo(3, 'Confirme tocando em <b>“Adicionar”</b>',
+        '<div class="m-conf"><div class="topo"><span>Cancelar</span><span class="alvo">Adicionar</span></div>' +
+        '<div class="app"><img src="img/icone-192.png" alt=""><div><b>Neon Player</b><small>neontv.app/player</small></div></div></div>');
+      // 4. o ícone na tela de início
+      passo('ok', antesDeEntrar
+        ? '<b>Pronto!</b> Abra <b>pelo ícone</b> e faça o seu login'
+        : '<b>Pronto!</b> O ícone aparece na sua <b>Tela de Início</b>',
+        '<div class="m-icone"><img src="img/icone-192.png" alt=""><span>Neon Player</span></div>');
       c.appendChild(corpo);
       c.appendChild(el('div', { class: 'botoes' }, antesDeEntrar
         ? [el('button', { class: 'btn s', text: 'Continuar no Safari', onclick: Folha.fechar }), el('button', { class: 'btn p', text: 'Entendi', onclick: Folha.fechar })]

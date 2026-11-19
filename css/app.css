@@ -322,3 +322,52 @@ img{display:block}
   .trilho .cartaz{width:150px}
   #capa .dentro{max-width:70%}
 }
+
+/* ---------- instalar na tela de início: passos ilustrados ---------- */
+.instalar{padding:0 14px!important}
+.pcard{display:flex;align-items:stretch;gap:10px;margin-bottom:8px;min-height:84px;border-radius:16px;border:1px solid rgba(23,51,90,.9);
+  background:linear-gradient(135deg,rgba(11,23,48,.95),rgba(8,18,37,.95));overflow:hidden}
+.pcard .pt{flex:1 1 52%;min-width:0;display:flex;align-items:center;gap:11px;padding:10px 4px 10px 12px}
+.pcard .pt p{margin:0;font-size:14px;line-height:1.3;color:#dbe6f8}
+.pcard .pt p b{color:var(--ciano);font-weight:800}
+.pcard .b{width:34px;height:34px;flex:none;border-radius:50%;border:2px solid var(--ciano);color:var(--ciano);display:flex;align-items:center;justify-content:center;
+  font-weight:800;font-size:16px;box-shadow:0 0 12px rgba(0,217,255,.35),inset 0 0 8px rgba(0,217,255,.18)}
+.pcard .b svg{width:18px;height:18px;stroke-width:3}
+.pcard .pm{flex:0 0 46%;min-width:0;display:flex;align-items:center;justify-content:center;padding:10px 10px 10px 4px;font-size:10.5px;color:#b9c7e0}
+.pm svg{width:15px;height:15px;flex:none}
+.pm .alvo{color:#fff;border-radius:9px;box-shadow:0 0 0 1.5px var(--ciano),0 0 14px rgba(0,217,255,.55);background:rgba(0,148,255,.20)}
+.m-safari{width:100%;border:1px solid var(--linha);border-bottom:0;border-radius:14px 14px 0 0;background:#060d1f;padding:7px 8px 6px}
+.m-safari .end{background:var(--sup2);border-radius:8px;text-align:center;padding:4px 0;color:#dfe8f8;font-weight:600}
+.m-safari .ics{display:flex;justify-content:space-between;align-items:center;padding:7px 2px 0;color:var(--azul)}
+.m-safari .alvo{display:inline-flex;padding:5px;border-radius:50%}
+.m-lista{width:100%;border:1px solid var(--linha);border-radius:10px;background:#060d1f;overflow:hidden}
+.m-lista div{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:6px 8px;border-bottom:1px solid rgba(23,51,90,.7);white-space:nowrap;overflow:hidden}
+.m-lista div:last-child{border-bottom:0}
+.m-lista .alvo{margin:3px;padding:6px 6px;border-radius:8px;border-bottom:0;font-weight:700;font-size:10px}
+.m-conf{width:100%;border:1px solid var(--linha);border-radius:10px;background:#060d1f;padding:7px 8px 8px}
+.m-conf .topo{display:flex;align-items:center;justify-content:space-between;gap:4px;color:var(--azul)}
+.m-conf .topo .alvo{padding:5px 8px;border-radius:999px;font-weight:800}
+.m-conf .app{display:flex;align-items:center;gap:8px;margin-top:8px;background:var(--sup2);border-radius:8px;padding:6px}
+.m-conf .app img{width:30px;height:30px;border-radius:7px;flex:none}
+.m-conf .app b{display:block;color:#fff;font-weight:700}
+.m-conf .app small{display:block;color:var(--fraco);font-size:9.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.m-conf .app div{min-width:0}
+.m-icone{display:flex;flex-direction:column;align-items:center;gap:5px;color:#dfe8f8;font-weight:600}
+.m-icone img{width:58px;height:58px;border-radius:14px;box-shadow:0 0 0 1px rgba(0,217,255,.45),0 0 18px rgba(0,148,255,.45)}
+@media (orientation:landscape),(min-width:820px){
+  #folha .caixa:has(.instalar){max-width:720px}
+  .instalar{display:grid;grid-template-columns:1fr 1fr;grid-auto-rows:max-content;gap:9px}
+  .instalar .pcard{margin-bottom:0}
+}
+/* deitado no celular a tela é baixa: sai a frase de abertura e os cartões encolhem, para os 4 passos caberem */
+@media (orientation:landscape) and (max-height:480px){
+  #folha .caixa:has(.instalar) .texto{display:none}
+  #folha .caixa:has(.instalar) h3{padding-bottom:6px}
+  .instalar .pcard{min-height:70px}
+  .instalar .pcard .pt{padding-top:6px;padding-bottom:6px}
+  .instalar .pcard .pm{padding-top:6px;padding-bottom:6px}
+  .instalar .m-icone img{width:42px;height:42px;border-radius:11px}
+  .instalar .m-conf .app{margin-top:5px;padding:4px 6px}
+  #folha .caixa:has(.instalar) .botoes{padding-top:8px}
+  #folha .caixa:has(.instalar) .botoes .btn{height:42px}
+}
