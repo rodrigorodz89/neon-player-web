@@ -1,7 +1,7 @@
 /* Neon Player web — base: utilidades, guarda local, textos, controle dos pais. */
 'use strict';
 
-var VERSAO = '0.1.0';
+var VERSAO = '0.1.1';
 
 function $(id) { return document.getElementById(id); }
 function el(tag, attrs, filhos) {
