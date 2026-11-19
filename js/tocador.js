@@ -9,25 +9,58 @@ function Motor(video) {
   this.v = video; this.hls = null; this.url = null;
 }
 Motor.ehHls = function (url) { return /\.m3u8(\?|$)/i.test(url); };
+// O hls.js (~300 KB) só é baixado quando precisa: no iPhone e no iPad NUNCA (o
+// Safari toca HLS sozinho), e no Android/PC só no primeiro canal ao vivo.
+var carregandoHls = null;
+Motor.carregarHls = function () {
+  if (window.Hls) return Promise.resolve(true);
+  if (!carregandoHls) carregandoHls = new Promise(function (ok) {
+    var s = document.createElement('script');
+    s.src = 'js/vendor/hls.light.min.js?v=1.5.17';
+    s.onload = function () { ok(!!window.Hls); };
+    s.onerror = function () { carregandoHls = null; ok(false); };
+    document.head.appendChild(s);
+  });
+  return carregandoHls;
+};
+Motor.precisaHls = function (video, url) {
+  if (!Motor.ehHls(url)) return false;
+  var nativo = video.canPlayType('application/vnd.apple.mpegurl') !== '';
+  if (Aparelho.ios && nativo) return false;
+  return !!(window.MediaSource || window.ManagedMediaSource);
+};
 Motor.prototype.abrir = function (url) {
   var v = this.v, eu = this;
   this.soltar();
   this.url = url;
-  var nativo = v.canPlayType('application/vnd.apple.mpegurl') !== '';
-  if (Motor.ehHls(url) && !(Aparelho.ios && nativo) && window.Hls && Hls.isSupported()) {
-    var h = new Hls({ enableWorker: true, lowLatencyMode: false, backBufferLength: 30, maxBufferLength: 20, manifestLoadingTimeOut: 15000, fragLoadingTimeOut: 25000 });
-    this.hls = h;
-    h.on(Hls.Events.ERROR, function (ev, d) {
-      if (!d || !d.fatal || eu.hls !== h) return;
-      if (d.type === Hls.ErrorTypes.MEDIA_ERROR && !eu._recuperou) { eu._recuperou = true; try { h.recoverMediaError(); return; } catch (e) {} }
-      // o hls.js desistiu: avisa como o <video> avisaria
-      v.dispatchEvent(new CustomEvent('falha'));
-    });
-    h.loadSource(url); h.attachMedia(v);
-  } else {
-    v.src = url; v.load();
-  }
   this._recuperou = false;
+  if (Motor.precisaHls(v, url)) {
+    Motor.carregarHls().then(function (ok) {
+      if (eu.url !== url) return;                 // trocou de canal enquanto baixava
+      if (ok && Hls.isSupported()) eu._comHls(url); else eu._direto(url);
+    });
+    return;
+  }
+  this._direto(url);
+};
+Motor.prototype._direto = function (url) {
+  var v = this.v;
+  v.src = url; v.load();
+  var p = v.play(); if (p && p.catch) p.catch(function () {});
+};
+Motor.prototype._comHls = function (url) {
+  var v = this.v, eu = this;
+  // buffer curto: celular tem pouca memória e ao vivo não precisa de mais
+  var h = new Hls({ enableWorker: true, lowLatencyMode: false, backBufferLength: 10, maxBufferLength: 20, maxMaxBufferLength: 30,
+    manifestLoadingTimeOut: 15000, fragLoadingTimeOut: 25000 });
+  this.hls = h;
+  h.on(Hls.Events.ERROR, function (ev, d) {
+    if (!d || !d.fatal || eu.hls !== h) return;
+    if (d.type === Hls.ErrorTypes.MEDIA_ERROR && !eu._recuperou) { eu._recuperou = true; try { h.recoverMediaError(); return; } catch (e) {} }
+    // o hls.js desistiu: avisa como o <video> avisaria
+    v.dispatchEvent(new CustomEvent('falha'));
+  });
+  h.loadSource(url); h.attachMedia(v);
   var p = v.play(); if (p && p.catch) p.catch(function () {});
 };
 Motor.prototype.soltar = function () {
@@ -39,7 +72,7 @@ Motor.prototype.soltar = function () {
 };
 
 /* ------------------------------------------------------------------ canal ao vivo (a "caixinha" da TV ao Vivo) */
-/* Tela cheia (19/11/2026, fila do Rodrigo): o MESMO <video> da caixinha cresce
+/* Tela cheia (19/11/2026): o MESMO <video> da caixinha cresce
    para a tela inteira (classe .cheio), com a barra do Android por cima. Antes o
    iPhone usava o player dele (webkitEnterFullscreen): controles que não são do
    Neon, barra de progresso num canal ao vivo, e — o defeito — ao sair dele o

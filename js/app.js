@@ -48,7 +48,12 @@ var App = (function () {
         aviso('lista', 'Lista não compatível', 'Esta lista usa um formato que o player do navegador ainda não abre. Use o aplicativo Neon Player na TV ou no computador.');
         return;
       }
-      if (viaLogin && loginUsado) Guarda.gravar('np_login', loginUsado);
+      // Guarda o TOKEN que a API devolveu, nunca a senha (revisão de invasão, 19/11/2026):
+      // o token só vale para este cadastro e morre quando a senha da lista muda no painel.
+      if (viaLogin) {
+        if (r.token) Guarda.gravar('np_login', { u: r.usuario || (loginUsado && loginUsado.u) || '', t: r.token });
+        else Guarda.apagar('np_login');
+      }
       Sessao.status = st; Sessao.viaLogin = !!viaLogin; Sessao.cliente = r.label || null; Sessao.listaNome = fonte.nome || null;
       Sessao.demo = st === 'demo' ? (r.demo || { dias: 1 }) : null;
       Sessao.suporte = st === 'active' && r.support ? (r.support.whatsapp || null) : null;
@@ -59,8 +64,11 @@ var App = (function () {
     }
     if (st === 'blocked') { aviso('bloqueado', 'Acesso bloqueado', Textos.bloqueado); return; }
     if (st === 'expired') { aviso('vencido', 'Acesso vencido', Textos.vencido); return; }
-    // sem cadastro
-    if (viaLogin) { irParaEntrar((r && r.message) || Textos.naoConfere, false); return; }
+    // sem cadastro (ou o token deixou de valer: senha da lista trocada, aparelho apagado)
+    if (viaLogin) {
+      if (r && r.token_invalido) { Guarda.apagar('np_login'); irParaEntrar('O seu acesso mudou. Entre de novo com o usuário e a senha da lista.', false); return; }
+      irParaEntrar((r && r.message) || Textos.naoConfere, false); return;
+    }
     irParaEntrar('', false);
   }
 
@@ -83,8 +91,9 @@ var App = (function () {
   function carregar() {
     Tela.mostrar('carga'); Tela.status('Abrindo…');
     var login = Guarda.ler('np_login', null);
-    if (login && login.u && login.s) {
-      Api.entrar(login.u, login.s).then(function (r) { tratar(r, true, login); }).catch(function (e) {
+    // login.t = token (o normal); login.s = senha guardada pela 0.1.0/0.1.1, que vira token nesta abertura
+    if (login && (login.t || (login.u && login.s))) {
+      (login.t ? Api.entrarComToken(login.t) : Api.entrar(login.u, login.s)).then(function (r) { tratar(r, true, login); }).catch(function (e) {
         aviso('sem conexão', 'Sem conexão', e && e.freio ? Textos.muitasTentativas : Textos.semConexao);
       });
       return;

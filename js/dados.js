@@ -25,6 +25,14 @@ var Api = (function () {
   }
 
   // Entrar com o usuário e a senha da lista: só quem está cadastrado no painel.
+  // Reabertura: o token que a API deu no primeiro login (a senha não fica guardada).
+  function entrarComToken(token) {
+    return pedir(BASE + '/v2/web/entrar', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: token, codigo: Aparelho.codigo(), plat: Aparelho.plataforma, v: VERSAO })
+    }, 20000).then(json);
+  }
+
   function entrar(usuario, senha) {
     return pedir(BASE + '/v2/web/entrar', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -44,7 +52,7 @@ var Api = (function () {
     });
   }
 
-  return { entrar: entrar, ativar: ativar, local: LOCAL };
+  return { entrar: entrar, entrarComToken: entrarComToken, ativar: ativar, local: LOCAL };
 })();
 
 /* ------------------------------------------------------------------ servidor da lista */

@@ -17,7 +17,7 @@
 
    Duas exceções: localhost/127.0.0.1 (os testes) e a chave do dono
    (?dev=<chave> uma vez grava no navegador; aqui só o SHA-256 dela; a chave
-   está no cofre do Rodrigo, neontv-player.env).
+   fica com o dono).
 
    Roda ANTES de qualquer outro script da página. */
 (function () {

@@ -15,10 +15,16 @@ var Tela = {
 
 /* ---------- peças comuns ---------- */
 function imagemSegura(url) { return url && /^https?:\/\//i.test(url) ? url : null; }
+// Capa do TMDB no tamanho que a tela usa (a lista manda a de 600 px, ~100 KB cada;
+// o cartaz ocupa ~120 px na tela: a de 342 px já sobra para a tela retina do iPhone).
+function tmdb(url, tam) {
+  var u = imagemSegura(url);
+  return u ? u.replace(/(image\.tmdb\.org\/t\/p\/)[^\/]+\//, '$1' + tam + '/') : null;
+}
 
 function cartaz(item, aoTocar, fracao) {
   var img = el('div', { class: 'img' });
-  var u = imagemSegura(item.poster);
+  var u = tmdb(item.poster, 'w342');
   function semImagem() { limpar(img); img.appendChild(el('div', { class: 'sem', text: item.nome })); }
   if (u) {
     var i = el('img', { loading: 'lazy', decoding: 'async', referrerpolicy: 'no-referrer', alt: '' });
@@ -134,7 +140,7 @@ var Inicio = (function () {
   // carregada (ou depois de 2,5 s, se ela não vier). `naTela` é o que os botões
   // Assistir e Detalhes abrem: sempre o título que a pessoa está vendo.
   function pintarCapa(x) {
-    var vez = ++camada, poster = imagemSegura(x.item.poster), feito = false;
+    var vez = ++camada, poster = tmdb(x.item.poster, 'w780'), feito = false;
     function texto() {
       if (feito || vez !== camada) return;
       feito = true; naTela = x;
@@ -213,7 +219,9 @@ var Inicio = (function () {
       fx.appendChild(el('span', { text: 'Código do aparelho:' })); fx.appendChild(el('b', { text: Aparelho.codigoBonito() }));
       fx.appendChild(el('button', { class: 'link', text: 'Copiar', onclick: function () { copiar(Aparelho.codigoBonito(), 'Código copiado'); } }));
     } else fx.hidden = true;
-    $('rodape').textContent = Textos.app + ' ' + VERSAO + ' · Código do aparelho: ' + Aparelho.codigoBonito();
+    // Quem entrou com usuário e senha não precisa do código na tela (ele é credencial
+    // quando o parceiro o cadastra); fica em Configurações para quem precisar.
+    $('rodape').textContent = Textos.app + ' ' + VERSAO + (Sessao.viaLogin ? '' : ' · Código do aparelho: ' + Aparelho.codigoBonito());
     clearInterval(relogio); relogio = setInterval(girar, 6000);
   }
   function pausar() { clearInterval(relogio); relogio = null; }
@@ -305,7 +313,9 @@ var Tv = (function () {
     limpar($('tv-epg'));
     $('tv-fav').hidden = !c;
     if (!c) return;
-    var n = $('tv-canais').querySelector('.linha[data-id="' + String(c.id).replace(/"/g, '') + '"]'); if (n) n.classList.add('sel');
+    // id do canal vem do servidor da lista: escapado, senão um id com \ ou ] derruba o seletor
+    var idSel = window.CSS && CSS.escape ? CSS.escape(String(c.id)) : String(c.id).replace(/[^\w-]/g, '');
+    var n = $('tv-canais').querySelector('.linha[data-id="' + idSel + '"]'); if (n) n.classList.add('sel');
     $('tv-fav').classList.toggle('on', Favoritos.tem(c.id));
     guia(c);
   }
@@ -416,7 +426,7 @@ var Ficha = (function () {
     var meta = [tipo === 's' ? Textos.serie : Textos.filme], ano = Destaques.anoDe(item.ano), n = parseFloat(String(item.nota || '').replace(',', '.'));
     if (ano > 0) meta.push(String(ano)); if (!isNaN(n) && n > 0) meta.push('★ ' + n.toFixed(1));
     $('ficha-meta').textContent = meta.join(' · ');
-    var p = $('ficha-poster'), u = imagemSegura(item.poster);
+    var p = $('ficha-poster'), u = tmdb(item.poster, 'w342');
     p.style.visibility = u ? '' : 'hidden'; if (u) p.src = u; else p.removeAttribute('src');
     $('ficha-arte').style.backgroundImage = u ? 'url("' + u.replace(/"/g, '%22') + '")' : '';
     $('ficha-sinopse').textContent = item.sinopse || '';
@@ -583,7 +593,7 @@ var Config = (function () {
 var Instalar = (function () {
   // No iPhone o aplicativo instalado (ícone na tela de início) guarda os dados
   // SEPARADO do Safari: quem entra no Safari e só depois instala precisa digitar
-  // usuário e senha de novo no ícone (o Rodrigo achou chato, 19/11/2026). Por
+  // usuário e senha de novo no ícone (19/11/2026). Por
   // isso o aviso vem ANTES do login: instala primeiro, entra uma vez só.
   // antesDeEntrar: aberto na tela de entrar (true) ou em Configurações, já logado (false).
   function abrir(antesDeEntrar) {
@@ -593,7 +603,7 @@ var Instalar = (function () {
         ? 'Assim o Neon Player vira um aplicativo no seu iPhone e você digita o usuário e a senha uma vez só.'
         : 'O aplicativo instalado guarda o acesso separado do Safari: ao abrir pelo ícone ele pede o usuário e a senha mais uma vez.' }));
       // Cada passo mostra ONDE tocar: a pessoa reconhece o botão pelo desenho, não
-      // pelo nome (pedido do Rodrigo em 19/11/2026, no modelo ilustrado). Os
+      // pelo nome (19/11/2026, modelo ilustrado). Os
       // desenhos são feitos aqui, em HTML e CSS, nas cores do Neon.
       var corpo = el('div', { class: 'corpo instalar' });
       var S = function (d) { return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + d + '</svg>'; };

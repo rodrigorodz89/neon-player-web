@@ -424,3 +424,13 @@ html.tv-cheia,html.tv-cheia body{overflow:hidden;background:#000}
   .tb-nome{font-size:16px}
 }
 @media (max-width:380px){ .tb-b,.tb-t{width:42px;height:42px} .tb-base{gap:6px;padding-left:calc(14px + var(--sl));padding-right:calc(14px + var(--sr))} }
+
+/* ---------- leve no Safari do iPhone (19/11/2026) ---------- */
+/* desfoque atrás da barra de abas custa GPU a cada rolagem por cima das capas: fundo sólido */
+#abas{backdrop-filter:none;-webkit-backdrop-filter:none;background:#060c1c}
+/* grade grande: o navegador não desenha cartaz fora da tela */
+#vod-grade .cartaz{content-visibility:auto;contain-intrinsic-size:auto 120px auto 220px}
+#tv-canais .linha{content-visibility:auto;contain-intrinsic-size:auto 52px}
+/* toque segurado em capa/vídeo não abre o menu do iOS; texto da tela não é selecionável */
+.cartaz,.linha,video,img{-webkit-touch-callout:none}
+.cartaz img{-webkit-user-drag:none}

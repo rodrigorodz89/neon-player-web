@@ -20,14 +20,17 @@
 <link rel="icon" type="image/png" href="img/favicon-32.png">
 <link rel="apple-touch-icon" href="img/apple-touch-icon.png">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="stylesheet" href="css/app.css?v=8">
+<link rel="preload" href="fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preconnect" href="https://api.neontv.app" crossorigin>
+<link rel="preconnect" href="https://image.tmdb.org">
+<link rel="stylesheet" href="css/app.css?v=10">
 </head>
 <body>
 <div id="app">
 
   <!-- carregando -->
   <section id="t-carga" class="tela ativa">
-    <img class="marca-g" src="img/icone-512.png" alt="Neon Player" width="132" height="132">
+    <img class="marca-g" src="img/marca-384.jpg" alt="Neon Player" width="132" height="132">
     <div class="rodando"></div>
     <div class="status" id="carga-status">Abrindo…</div>
   </section>
@@ -36,7 +39,7 @@
   <section id="t-entrar" class="tela">
     <form class="entrar" id="form-entrar" autocomplete="on" novalidate>
       <div class="lado-a">
-        <img class="marca-g" src="img/icone-512.png" alt="Neon Player" width="108" height="108">
+        <img class="marca-g" src="img/marca-384.jpg" alt="Neon Player" width="108" height="108">
         <h1>Entrar</h1>
         <p>Use o usuário e a senha da sua lista.</p>
       </div>
@@ -209,13 +212,12 @@
   <div id="toast"></div>
 </div>
 
-<script src="js/vendor/hls.light.min.js?v=1.5.17"></script>
-<script src="js/base.js?v=5"></script>
+<script src="js/base.js?v=7"></script>
 <script src="js/titulos.js?v=1"></script>
 <script src="js/destaques.js?v=1"></script>
-<script src="js/dados.js?v=2"></script>
-<script src="js/tocador.js?v=2"></script>
-<script src="js/telas.js?v=8"></script>
-<script src="js/app.js?v=3"></script>
+<script src="js/dados.js?v=3"></script>
+<script src="js/tocador.js?v=3"></script>
+<script src="js/telas.js?v=9"></script>
+<script src="js/app.js?v=4"></script>
 </body>
 </html>
