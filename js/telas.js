@@ -601,7 +601,7 @@ var Instalar = (function () {
       c.appendChild(el('h3', { text: antesDeEntrar ? 'Instale antes de entrar' : 'Instalar na tela de início' }));
       c.appendChild(el('div', { class: 'texto', text: antesDeEntrar
         ? 'Assim o Neon Player vira um aplicativo no seu iPhone e você digita o usuário e a senha uma vez só.'
-        : 'O aplicativo instalado guarda o acesso separado do Safari: ao abrir pelo ícone ele pede o usuário e a senha mais uma vez.' }));
+        : 'No Safari, o iPhone apaga o acesso salvo de sites que ficam 7 dias sem abrir. Pelo ícone ele fica salvo: você entra mais uma vez, pelo ícone, e não digita mais.' }));
       // Cada passo mostra ONDE tocar: a pessoa reconhece o botão pelo desenho, não
       // pelo nome (19/11/2026, modelo ilustrado). Os
       // desenhos são feitos aqui, em HTML e CSS, nas cores do Neon.
@@ -647,5 +647,12 @@ var Instalar = (function () {
     Guarda.gravar('np_instalar_antes', true);
     setTimeout(function () { if ($('t-entrar').classList.contains('ativa')) abrir(true); }, 700);
   }
-  return { abrir: abrir, oferecer: oferecer, cabe: cabe };
+  // Uma vez, logo depois do primeiro login feito no Safari (sem instalar): o acesso
+  // salvo no Safari some depois de 7 dias sem abrir; no ícone, não (19/11/2026).
+  function oferecerDepois() {
+    if (!cabe() || Guarda.ler('np_instalar_depois', false)) return;
+    Guarda.gravar('np_instalar_depois', true);
+    setTimeout(function () { if (!$('casca').hidden) abrir(false); }, 1500);
+  }
+  return { abrir: abrir, oferecer: oferecer, oferecerDepois: oferecerDepois, cabe: cabe };
 })();

@@ -144,13 +144,6 @@ var AoVivo = (function () {
       pintarEstado(); mostrarBarra();
       if (aoMudar) aoMudar(canal, true);
     });
-    // Enviar para a TV: AirPlay no iPhone; Chromecast/TV pelo navegador onde ele souber
-    var podeTv = !!(video.webkitShowPlaybackTargetPicker || (video.remote && video.remote.prompt));
-    $('tb-tv').hidden = !podeTv;
-    $('tb-tv').addEventListener('click', function () {
-      try { if (video.webkitShowPlaybackTargetPicker) video.webkitShowPlaybackTargetPicker(); else video.remote.prompt().catch(function () {}); } catch (e) {}
-      mostrarBarra();
-    });
     $('tv-barra').addEventListener('click', function (e) { if (e.target === $('tv-barra')) esconderBarra(); });
     document.addEventListener('visibilitychange', function () {
       // voltou para o app e o canal estava parado: religa (o iPhone pausa o vídeo fora da tela)

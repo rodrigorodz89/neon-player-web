@@ -33,8 +33,8 @@ var App = (function () {
     $('btn-demo').hidden = !comDemo;
     $('btn-instalar').hidden = !Instalar.cabe();
     $('btn-entrar').disabled = false; $('btn-entrar').textContent = 'Entrar';
-    var l = Guarda.ler('np_login', null);
-    if (l && l.u && !$('in-usuario').value) $('in-usuario').value = l.u;
+    var l = Guarda.ler('np_login', null), uSalvo = (l && l.u) || Guarda.ler('np_usuario', '');
+    if (uSalvo && !$('in-usuario').value) $('in-usuario').value = uSalvo;
     Tela.mostrar('entrar');
     Instalar.oferecer();   // iPhone no Safari: instalar ANTES de entrar, para logar uma vez só
   }
@@ -51,8 +51,14 @@ var App = (function () {
       // Guarda o TOKEN que a API devolveu, nunca a senha (revisão de invasão, 19/11/2026):
       // o token só vale para este cadastro e morre quando a senha da lista muda no painel.
       if (viaLogin) {
-        if (r.token) Guarda.gravar('np_login', { u: r.usuario || (loginUsado && loginUsado.u) || '', t: r.token });
-        else Guarda.apagar('np_login');
+        var u = r.usuario || (loginUsado && loginUsado.u) || '';
+        if (r.token) {
+          Guarda.gravar('np_login', { u: u, t: r.token });
+          // o usuário fica mesmo se o acesso cair (senha trocada, 3º aparelho): só falta a senha
+          if (u) Guarda.gravar('np_usuario', u);
+          // pede ao navegador para não apagar o acesso salvo por falta de espaço (Safari 17+, Chrome)
+          try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(function () {}); } catch (e) {}
+        } else Guarda.apagar('np_login');
       }
       Sessao.status = st; Sessao.viaLogin = !!viaLogin; Sessao.cliente = r.label || null; Sessao.listaNome = fonte.nome || null;
       Sessao.demo = st === 'demo' ? (r.demo || { dias: 1 }) : null;
@@ -86,6 +92,7 @@ var App = (function () {
       return Catalogo.carregar(Tela.status).then(function () {
         Tela.mostrar('casca');
         Pag.ir('inicio');
+        if (Sessao.viaLogin) Instalar.oferecerDepois();   // entrou pelo Safari: ícone guarda o acesso de vez
       });
     }).catch(function (e) {
       console.error(e);
@@ -133,7 +140,7 @@ var App = (function () {
   function esquecerLogin() {
     var l = Guarda.ler('np_login', null);
     if (l && l.t) Api.sair(l.t);
-    Guarda.apagar('np_login');
+    Guarda.apagar('np_login'); Guarda.apagar('np_usuario');   // sair = quer outro usuário
   }
 
   function sair() {
